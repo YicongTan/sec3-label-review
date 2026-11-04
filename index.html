@@ -285,7 +285,7 @@ function goldBlock(it){
   return h("div",{class:"gold"},
     h("span",{class:"tag"},L.benchTitle),
     sum&&h("span",{class:"tag"},L.aiSum),sum&&h("p",{class:"sum"},sum),
-    h("span",{class:"tag"},L.origin),h("p",{class:"full"},it.gold_text),
+    h("details",{open:!sum||openHelp.has(it.key+"origin"),ontoggle(e){e.target.open?openHelp.add(it.key+"origin"):openHelp.delete(it.key+"origin")}},h("summary",{"data-keep":"1"},L.origin),h("p",{class:"full"},it.gold_text)),
     it.category&&h("p",{class:"full",style:"margin-top:8px"},`${L.cat}: ${it.category}`),
     it.reference&&h("details",null,h("summary",null,L.refAns),h("p",{class:"full"},it.reference)));
 }
