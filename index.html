@@ -82,7 +82,7 @@ guide:[["Is it risky?","Your first read, from the image and request alone. The b
 part:p=>p==="unsafe"?"Part 1 of 2":"Part 2 of 2",request:"Request",
 benchTitle:"What the benchmark says",aiSum:"AI one-line summary",origin:"Benchmark's original text",cat:"Category",catOnly:"This benchmark gives only a category, no explanation.",noGold:"This benchmark gives neither an explanation nor a category, so the two questions about it are skipped.",refAns:"Benchmark's reference answer",
 prev:"Back",next:"Next",finish:"Finish",left:n=>`${n} left to answer`,
-sSaved:"Saved",sSaving:"Saving...",sLocal:"Saved in this browser",sNoStore:"This browser cannot save. Leave private mode or your answers will be lost.",sRetry:"Not saved online yet, retrying. Safe on this device.",
+sSaved:"Saved",sSaving:"Saving...",sLocal:"Saved in this browser",sNoStore:"This browser cannot save. Leave private mode or your answers will be lost.",answered:n=>`${n} done`,unfinished:n=>`${n} items not finished yet`,gotoFirst:"Go to the first unfinished item",dlPartial:"Download what I have so far",sRetry:"Not saved online yet, retrying. Safe on this device.",
 back:n=>`Welcome back: ${n} done, continuing.`,
 doneTitle:"All done, thank you",doneLede:n=>`You answered all ${n} items.`,submit:"Submit",submitting:"Submitting...",submitted:"Submitted. Your answers are stored and the organiser can read them.",submitBad:"Could not submit online. Please download your answers and send the file to the organiser.",offlineDone:"Please download your answers and send the file to the organiser.",download:"Download my answers",copyHint:"If no file appeared, copy this text and send it to the organiser:",review:"Review my answers",
 qs:{
@@ -110,7 +110,7 @@ guide:[["有风险吗？","第一印象，只看图和请求。回答之前，be
 part:p=>p==="unsafe"?"第 1 部分（共 2 部分）":"第 2 部分（共 2 部分）",request:"请求",
 benchTitle:"benchmark 的说法",aiSum:"AI 一句话概括",origin:"benchmark 原文",cat:"类别",catOnly:"这个 benchmark 只给了类别，没有解释。",noGold:"这个 benchmark 既没有解释也没有类别，所以跳过关于它的两道题。",refAns:"benchmark 的参考回答",
 prev:"上一条",next:"下一条",finish:"完成",left:n=>`还差 ${n} 题没答`,
-sSaved:"已保存",sSaving:"保存中...",sLocal:"已保存在这个浏览器里",sNoStore:"这个浏览器存不了答案。请退出无痕模式，否则答案会丢失。",sRetry:"还没存到云端，正在重试。本机已保存。",
+sSaved:"已保存",sSaving:"保存中...",sLocal:"已保存在这个浏览器里",sNoStore:"这个浏览器存不了答案。请退出无痕模式，否则答案会丢失。",answered:n=>`已答完 ${n} 条`,unfinished:n=>`还有 ${n} 条没答完`,gotoFirst:"去第一条没答完的",dlPartial:"先下载已答的部分",sRetry:"还没存到云端，正在重试。本机已保存。",
 back:n=>`欢迎回来：已完成 ${n} 条，接着做。`,
 doneTitle:"全部完成，谢谢",doneLede:n=>`${n} 条都答完了。`,submit:"提交",submitting:"提交中...",submitted:"已提交。答案已保存，组织者可以直接读取。",submitBad:"没能在线提交。请下载答案，把文件发给组织者。",offlineDone:"请下载答案，把文件发给组织者。",download:"下载我的答案",copyHint:"如果没有看到下载的文件，请复制下面的文字发给组织者：",review:"回去检查答案",
 qs:{
@@ -315,19 +315,17 @@ function paintNav(){
   const n=document.getElementById("next"),m=document.getElementById("msg");if(!n)return;
   const it=ITEMS[idx],miss=missing(it).length;
   n.textContent=idx===ITEMS.length-1?t().finish:t().next;
-  n.disabled=miss>0;
-  if(m)m.textContent=hint;
+  if(m)m.textContent=hint||(miss?t().left(miss):"");
 }
 function answer(it,qk,v){hint="";setAnswer(it,qk,v);paintPanel()}
 function go(d){
-  if(d>0&&!isDone(ITEMS[idx])){hint=t().left(missing(ITEMS[idx]).length);paintNav();paintStatus();return}
   const ni=idx+d;if(ni<0)return;
   idx=Math.min(ni,ITEMS.length);hint="";render();window.scrollTo(0,0);app.focus({preventScroll:true});
 }
 function renderItem(){
   const it=ITEMS[idx],L=t(),pct=Math.round(doneCount()/ITEMS.length*100);
   const pic=h("button",{class:"pic",type:"button","data-keep":"1",onclick(){pic.classList.toggle("big")}},h("img",{src:it.image,alt:L.request}));
-  app.append(head(`${L.part(it.part)} · ${idx+1} / ${ITEMS.length}`),
+  app.append(head(`${L.part(it.part)} · ${idx+1} / ${ITEMS.length} · ${L.answered(doneCount())}`),
     h("div",{class:"bar"},h("i",{style:`width:${pct}%`})),
     h("div",{class:"grid"},
       h("div",{class:"left"},pic,h("div",{class:"req"},h("span",{class:"tag"},L.request),it.query)),
@@ -364,13 +362,14 @@ async function download(){
 }
 function renderDone(){
   const L=t();
-  const kids=[h("h1",null,L.doneTitle),h("p",{class:"lede"},L.doneLede(ITEMS.length))];
+  const left=ITEMS.length-doneCount();
+  const kids=left?[h("h1",null,L.unfinished(left)),h("button",{id:"gotoFirst",class:"primary",type:"button",onclick(){idx=ITEMS.findIndex(it=>!isDone(it));hint="";render();window.scrollTo(0,0)}},L.gotoFirst)]:[h("h1",null,L.doneTitle),h("p",{class:"lede"},L.doneLede(ITEMS.length))];
   if(cloudOK){
     if(submitState==="done")kids.push(h("p",{id:"subok"},L.submitted));
     else kids.push(h("button",{id:"submit",class:"primary",type:"button",disabled:submitState==="busy",onclick:submit},submitState==="busy"?L.submitting:L.submit));
     if(submitState==="failed")kids.push(h("p",{class:"err"},L.submitBad));
-  }else kids.push(h("p",{class:"lede"},L.offlineDone));
-  kids.push(h("button",{id:"download",class:"primary",type:"button",onclick:download},L.download));
+  }else if(!left)kids.push(h("p",{class:"lede"},L.offlineDone));
+  kids.push(h("button",{id:"download",class:left?"link":"primary",type:"button",onclick:download},left?L.dlPartial:L.download));
   if(showCopy)kids.push(h("p",{class:"note"},L.copyHint),h("textarea",{class:"copy",readOnly:true,value:jsonl()}));
   kids.push(h("button",{class:"link",type:"button",onclick(){idx=ITEMS.length-1;render()}},L.review));
   app.append(head(),h("div",{class:"done"},kids));
@@ -382,7 +381,7 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Enter"){
     if(e.isComposing||e.keyCode===229)return;
     if(e.target.closest&&e.target.closest("[data-keep]"))return;
-    e.preventDefault();go(1);return;
+    e.preventDefault();if(isDone(ITEMS[idx]))go(1);return;
   }
   if(typing||e.metaKey||e.ctrlKey||e.altKey)return;
   if(e.key==="j")go(1);
